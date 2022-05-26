@@ -1,45 +1,86 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 
-function LastSalesPages() {
-  const [sales, setSales] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+function LastSalesPage(props) {
+  const [sales, setSales] = useState(props.sales);
+  // const [isLoading, setIsLoading] = useState(false);
 
+  const { data, error } = useSWR(
+    'https://listproductsnext-default-rtdb.firebaseio.com/sales.json'
+  );
 
   useEffect(() => {
-    setIsLoading(true)
-    fetch('https://listproductsnext-default-rtdb.firebaseio.com/sales.json').then((response) => response.json())
-      .then(data => {
-        const transformedSales = [];
+    if (data) {
+      const transformedSales = [];
 
-        for (const key in data) {
-          transformedSales.push({
-            id: key,
-            username: data[key].username,
-            volume: data[key].volume
-          });
-        }
+      for (const key in data) {
+        transformedSales.push({
+          id: key,
+          username: data[key].username,
+          volume: data[key].volume,
+        });
+      }
 
+      setSales(transformedSales);
+    }
+  }, [data]);
 
-        setSales(transformedSales);
-        setIsLoading(false)
-      })
-  }, []);
+  // useEffect(() => {
+  //   setIsLoading(true);
+  //   fetch('https://listproductsnext-default-rtdb.firebaseio.com/sales.json')
+  //     .then((response) => response.json())
+  //     .then((data) => {
+  //       const transformedSales = [];
 
+  //       for (const key in data) {
+  //         transformedSales.push({
+  //           id: key,
+  //           username: data[key].username,
+  //           volume: data[key].volume,
+  //         });
+  //       }
 
-  if (isLoading) {
-    return <p>Loading.....</p>
+  //       setSales(transformedSales);
+  //       setIsLoading(false);
+  //     });
+  // }, []);
+
+  if (error) {
+    return <p>Failed to load.</p>;
   }
 
+  if (!data && !sales) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <ul>
-      {sales.map(sale => (
+      {sales.map((sale) => (
         <li key={sale.id}>
-          {sale.username} - {sale.volume}
+          {sale.username} - ${sale.volume}
         </li>
       ))}
     </ul>
-  )
+  );
 }
 
-export default LastSalesPages;
+export async function getStaticProps() {
+  const response = await fetch(
+    'https://listproductsnext-default-rtdb.firebaseio.com/sales.json'
+  );
+  const data = await response.json();
+
+  const transformedSales = [];
+
+  for (const key in data) {
+    transformedSales.push({
+      id: key,
+      username: data[key].username,
+      volume: data[key].volume,
+    });
+  }
+
+  return { props: { sales: transformedSales } };
+}
+
+export default LastSalesPage;
